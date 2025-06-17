@@ -3,9 +3,12 @@ from decouple import config
 import logging
 from aiogram import Bot, Dispatcher
 from handlers import applications
+import logging
+
+
 
 async def main():
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w")
 
     bot = Bot(token=config('TOKEN'))
     dp = Dispatcher()
