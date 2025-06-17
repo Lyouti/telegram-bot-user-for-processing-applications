@@ -4,11 +4,12 @@ import logging
 from aiogram import Bot, Dispatcher
 from handlers import applications
 import logging
-
-
+import os
 
 async def main():
-    logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    log_file_path = os.path.join(script_dir, 'my_log.log')
+    logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="w", encoding='utf-8')
 
     bot = Bot(token=config('TOKEN'))
     dp = Dispatcher()
