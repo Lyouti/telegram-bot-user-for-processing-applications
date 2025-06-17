@@ -9,7 +9,6 @@ import logging
 llm = ChatOllama(model="herenickname/t-tech_T-lite-it-1.0:q4_k_m", temperature=0)
 
 
-
 class Classification_application(BaseModel):
     classification: bool = Field(description="логическое значение является ли сообщение заявкой. True - если сообщение заявка и False - если не заявка.")
 
@@ -24,12 +23,6 @@ class Number_office(BaseModel):
 
 class Description_application(BaseModel):
     description_application: Optional[str] = Field(description="Описание проблемы, которую должен решить системный админимстратор")
-
-# class Information_about_application(BaseModel):
-#     name: Optional[str] = None
-#     numbers_phone: Optional[list[int]]
-#     number_office: Optional[int]
-#     description_application: Optional[str]
 
 class State(BaseModel):
     user_input: str 
@@ -55,8 +48,6 @@ def classification_node(state: State):
         classification_input = None
 
     return {"classification": classification_input}
-
-
 
 def collecting_name_node(state: State):
 
@@ -100,7 +91,6 @@ def collecting_number_office_node(state: State):
     result = state.extracted_info
     result.update({"number_office": number_office})
     return {"extracted_info": result}
-
 
 def collecting_description_application_node(state: State):
     parser = PydanticOutputParser(pydantic_object=Description_application)
