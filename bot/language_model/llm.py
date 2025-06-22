@@ -1,4 +1,5 @@
 from langchain_community.chat_models import ChatOllama
+from decouple import config
 from pydantic import BaseModel, Field
 from langchain_core.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
@@ -7,7 +8,11 @@ from typing import Optional, Any
 import logging
 import re
 
-llm = ChatOllama(model="herenickname/t-tech_T-lite-it-1.0:q4_k_m", temperature=0)
+logger = logging.getLogger(__name__)
+
+llm = ChatOllama(base_url=config("OLLAMA_HOST"), 
+                model="herenickname/t-tech_T-lite-it-1.0:q4_k_m",
+                temperature=0)
 
 def parser_pydantic(obj):
     # костыль для преобразования модели pydantic в значение его поля
@@ -62,27 +67,30 @@ def collecting_number_office():
     chain = prompt | llm | parser | parser_pydantic
     return chain
 
-def extraction_numbers(text):
-    # Извлекает номера телефонов (четырехзначные и десятизначные) из текста.
+def get_runnable_extraction_numbers():
+    def extraction_numbers(text):
+        # Извлекает номера телефонов (четырехзначные и десятизначные) из текста.
 
-    # Паттерн для 4-значных номеров
-    pattern_local_phone = r"\b\d{4}\b"
+        # Паттерн для 4-значных номеров
+        pattern_local_phone = r"\b\d{4}\b"
 
-    # Паттерн для 10-значных номеров
-    pattern_personal_phone = r"(?:\+7)?[\s\(]?\d{3}[\s\)]?\s?\d{3}[-\s]?\d{2}[-\s]?\d{2}\b"
+        # Паттерн для 10-значных номеров
+        pattern_personal_phone = r"(?:\+7)?[\s\(]?\d{3}[\s\)]?\s?\d{3}[-\s]?\d{2}[-\s]?\d{2}\b"
 
-    # Ищем все совпадения для обоих паттернов
-    matches_local_phone = re.findall(pattern_local_phone, text)
-    matches_personal_phone = re.findall(pattern_personal_phone, text)
+        # Ищем все совпадения для обоих паттернов
+        matches_local_phone = re.findall(pattern_local_phone, text)
+        matches_personal_phone = re.findall(pattern_personal_phone, text)
 
-    # Объединяем результаты
-    matches = matches_local_phone + matches_personal_phone
+        # Объединяем результаты
+        matches = matches_local_phone + matches_personal_phone
 
-    if not matches:
-        matches = None
-    return matches
+        if not matches:
+            matches = None
+        return matches
 
-def llm_response(message):
+    return RunnableLambda(extraction_numbers)
+
+async def llm_response(message):
     
     result = {
         "user_input": message,
@@ -90,15 +98,21 @@ def llm_response(message):
         "extracted_info": None
     }
 
+    if not result["user_input"]:
+        return result
+
     chain = RunnableParallel({
         "name": collecting_name(),
         "number_office": collecting_number_office(),
-        "numbers_phone": extraction_numbers
+        "numbers_phone": get_runnable_extraction_numbers()
     })
 
-    result["classification"] = classification().invoke(message)
-    result["extracted_info"] = chain.invoke(message)
-
+    try:
+        result["classification"] = await classification().ainvoke(message)
+        if result["classification"]:
+            result["extracted_info"] = await chain.ainvoke(message)
+    except Exception: 
+        logger.error("Error receiving a response from the language model 1")
     return result
 
 
