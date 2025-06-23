@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from langchain_core.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableLambda, RunnableParallel
-from typing import Optional, Any
+from typing import Optional
 import logging
 import re
 
@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 
 llm = ChatOllama(base_url=config("OLLAMA_HOST"), 
                 model="herenickname/t-tech_T-lite-it-1.0:q4_k_m",
-                temperature=0)
+                temperature=0,
+                maxConcurrency=4,
+                max_tokens=200)
 
 def parser_pydantic(obj):
     # костыль для преобразования модели pydantic в значение его поля
@@ -108,11 +110,20 @@ async def llm_response(message):
     })
 
     try:
-        result["classification"] = await classification().ainvoke(message)
+        result["classification"] = await classification().with_retry(
+            stop_after_attempt=2, 
+            wait_exponential_jitter=True 
+        ).ainvoke(message)
+
         if result["classification"]:
-            result["extracted_info"] = await chain.ainvoke(message)
+
+            result["extracted_info"] = await chain.with_retry(
+                stop_after_attempt=2, 
+                wait_exponential_jitter=True 
+            ).ainvoke(message)
+
     except Exception: 
-        logger.error("Error receiving a response from the language model 1")
+        logger.error("Error receiving a response from the language model")
     return result
 
 

@@ -14,14 +14,10 @@ async def applications(message: Message):
         text = message.caption
     else: text = message.text
 
-    try:
-        info_about_message = await llm.llm_response(text)
-        logger.info(str(info_about_message))
-    except Exception:
-        logger.error("Error receiving a response from the language model")
-        info_about_message = None
+    info_about_message = await llm.llm_response(text)
+    logger.info(str(info_about_message))
 
-    if info_about_message and info_about_message["classification"]:
+    if info_about_message["classification"] and info_about_message["extracted_info"]:
         if None in info_about_message["extracted_info"].values():
             await message.reply(templates["warning_reply"])
         else: await message.reply(templates["success_reply"])

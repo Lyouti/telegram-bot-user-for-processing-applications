@@ -1,4 +1,4 @@
 .env
 __pycache__
-py_log.log
+my_log.log
 tests.py
